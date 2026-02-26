@@ -1,0 +1,9 @@
+Pillow
+matplotlib
+RPI.GPIO
+pigpio
+adafruit-circuitpython-max31856
+simple-pid
+board
+tk
+gpiozero

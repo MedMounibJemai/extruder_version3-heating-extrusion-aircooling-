@@ -1,0 +1,28 @@
+{
+    "Temp\u00e9rature": {
+        "min": 30.0,
+        "max": 300.0,
+        "step": 1.0,
+        "Kp": 0.66,
+        "Ki": 0.01,
+        "Kd": 18.78,
+        "target_value": 30.0
+    },
+    "Moteur": {
+        "min": 10.0,
+        "max": 250.0,
+        "step": 10.0,
+        "target_value": 100.0
+    },
+    "Refroidissement": {
+        "min": 0.0,
+        "max": 100.0,
+        "step": 5.0
+    },
+    "Options": {
+        "demarrage_moteur_faible_temperature_controle": 1,
+        "min": 0.0,
+        "max": 0.0,
+        "step": 0.0
+    }
+}
