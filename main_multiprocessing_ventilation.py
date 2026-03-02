@@ -18,8 +18,8 @@ from pages.config_window import ConfigWindow
 
 # Import des modules associés à chaque cadran
 from modules.systemchauffageMAX6675 import SystemeChauffageMAX6675  
-from modules.motor_extrusion_class_multiprocessing import MoteurExtrusion
-from modules.motor_extrusion_class_multiprocessing import run_motor_process  # à ajouter en haut, à côté de MoteurExtrusion
+from modules.motor_extrusion_drv8825_class_multiprocessing import MoteurExtrusion
+from modules.motor_extrusion_drv8825_class_multiprocessing import run_motor_process  # à ajouter en haut, à côté de MoteurExtrusion
 from modules.systeme_ventilation import SystemeVentilation
 
 class PageManager(tk.Frame):
