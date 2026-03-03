@@ -31,7 +31,7 @@ L’interface est optimisée pour un usage tactile sur écran 7".
 - Cartouche chauffante
 - Thermocouple type K + MAX6675 (SPI)
 - Moteur pas à pas NEMA17
-- Stepper Motor HAT B (driver HR8825)
+- Stepper Motor HAT B (driver HR8825) OR DRV8825 avec Stepper Motor Expansion Board
 - 3 ventilateurs 4-pins (PWM)
 
 ## ⚠️  Les alimentations de puissance (chauffage, moteur, ventilateurs) doivent être séparées de l’alimentation logique du Raspberry Pi, avec une **masse commune**.
@@ -63,7 +63,7 @@ L’interface SPI doit être activée dans le système Raspberry Pi.
 
 ---
 
-### ⚙️ Partie Moteur d’Extrusion
+### ⚙️ Partie Moteur d’Extrusion (en cas d'utilisation du Stepper Motor HAT B)
 
 Le moteur d’extrusion **NEMA17** est piloté via un **Stepper Motor HAT B**.
 
@@ -87,6 +87,57 @@ Le moteur d’extrusion **NEMA17** est piloté via un **Stepper Motor HAT B**.
 
 > ℹ️ Les GPIO utilisés par le Stepper Motor HAT B sont **réservés** et ne doivent pas être utilisés ailleurs dans le projet.
 
+---
+### ⚙️ Partie Moteur d’Extrusion (en cas d'utilisation du DRV8825 avec un Stepper Motor Driver Expansion Board)
+
+Les moteurs d’extrusion sont pilotés via des drivers **DRV8825** montés sur une **Stepper Motor Driver Expansion Board**.
+
+Cette configuration permet :
+- de réduire le nombre de GPIO utilisés (**2 GPIO par moteur**)
+- de simplifier le câblage
+- de déléguer la gestion du microstepping au **hardware**
+
+Le signal **ENABLE** du DRV8825 est connecté directement au **GND**, ce qui maintient le driver **toujours actif**.
+
+---
+
+#### Distribution des broches GPIO (mode BCM)
+
+##### 🔹 Moteur 1
+| Signal | GPIO Raspberry Pi |
+|------|-------------------|
+| STEP | GPIO16 |
+| DIR  | GPIO20 |
+| ENABLE | GND (toujours actif) |
+
+##### 🔹 Moteur 2
+| Signal | GPIO Raspberry Pi |
+|------|-------------------|
+| STEP | GPIO24 |
+| DIR  | GPIO12 |
+| ENABLE | GND (toujours actif) |
+
+> ℹ️ Les signaux **STEP** et **DIR** sont générés par le Raspberry Pi.  
+> Le signal **ENABLE** étant relié au GND, le driver DRV8825 reste activé en permanence.
+
+### 🧮 Microstepping – DRV8825 (Configuration matérielle)
+
+Le microstepping du driver **DRV8825** est configuré **uniquement par hardware** à l’aide des broches **MODE0, MODE1 et MODE2**.
+
+#### Table de configuration du microstepping
+
+| MODE0 | MODE1 | MODE2 | Résolution |
+|------|------|------|------------|
+| Low  | Low  | Low  | Full step |
+| High | Low  | Low  | Half step |
+| Low  | High | Low  | 1/4 step |
+| High | High | Low  | 1/8 step |
+| Low  | Low  | High | 1/16 step |
+| High | Low  | High | 1/32 step |
+| Low  | High | High | 1/32 step |
+| High | High | High | 1/32 step |
+
+> ⚠️ La résolution du microstepping est définie par le câblage des broches MODE0, MODE1 et MODE2 et **ne peut pas être modifiée par logiciel**.
 ---
 
 ### 🌬️ Partie Ventilation (Ventilateurs 4-pins)
