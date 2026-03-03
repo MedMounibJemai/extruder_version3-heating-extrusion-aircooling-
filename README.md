@@ -9,7 +9,7 @@ L’application est structurée autour de **trois sous-systèmes principaux** : 
 
 L’interface graphique permet :
 1. **Le contrôle thermique** d’une cartouche chauffante à l’aide d’un thermocouple type K et d’un module **MAX6675**, avec une logique **PID + autotune**  
-2. **Le contrôle de la vitesse (RPM)** du moteur d’extrusion **NEMA17** via un driver **HR8825** monté sur un **Stepper Motor HAT B**  
+2. **Le contrôle de la vitesse (RPM)** du moteur d’extrusion **NEMA17** via un driver **HR8825** monté sur un **Stepper Motor HAT B** ou via un driver **DRV8825** monté sur un **Stepper Motor Expansion Board**  
 3. **Le contrôle de la vitesse (PWM)** de **trois ventilateurs 4-pins** dédiés au refroidissement
 
 L’interface est optimisée pour un usage tactile sur écran 7".
