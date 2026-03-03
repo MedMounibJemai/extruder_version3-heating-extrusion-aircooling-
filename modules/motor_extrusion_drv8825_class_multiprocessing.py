@@ -293,6 +293,7 @@ class MoteurExtrusion:
                 try:
                     # Pulse STEP (identique)
                     self.driver.digital_write(self.driver.step_pin, 1)
+                    #time.sleep(0.00002)  # 20 µs
                     self.driver.digital_write(self.driver.step_pin, 0)
 
                     step_count += 1

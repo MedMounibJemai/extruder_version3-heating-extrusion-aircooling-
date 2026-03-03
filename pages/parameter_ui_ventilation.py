@@ -246,6 +246,7 @@ class ParameterUI(tk.Frame):
         self.serial_callback = serial_callback
         self.pwm_value = 0
         self.rpm_est_value = 0.0  # pour Ventilation (RPM estimé)
+        self._temp_lock_active = False  # évite d'envoyer EXTRUDER:OFF en boucle
 
 
         self.temp_value = None
@@ -327,6 +328,7 @@ class ParameterUI(tk.Frame):
                                            "La température est insuffisante pour démarrer le moteur.")
                     self.power_on = False
                     self.power_button.disabled = True
+                    self.power_button.state = False
                     self._redraw()
                     return
         self.power_on = state
@@ -588,11 +590,35 @@ class ParameterUI(tk.Frame):
         
         # Mise à jour finale du bouton pour le moteur
         if self.parameter_name == "Vitesse Moteur":
-            if self.control_enabled and self.temp_value is not None and self.temp_target is not None and self.temp_value < 0.7 * self.temp_target:
+            lock = (
+                self.control_enabled
+                and self.temp_value is not None
+                and self.temp_target is not None
+                and self.temp_value < 0.7 * self.temp_target
+            )
+
+            if lock:
+                # On entre en verrouillage => on force OFF une seule fois
+                if not self._temp_lock_active:
+                    self._temp_lock_active = True
+
+                    # Si le moteur était ON, on le coupe réellement
+                    if self.power_on:
+                        self.power_on = False
+                        self.power_button.state = False  # bouton visuellement sur OFF
+                        if self.serial_callback:
+                            self.serial_callback("EXTRUDER:OFF")
+
+                # UI verrouillée
                 self.power_on = False
+                self.power_button.state = False
                 self.power_button.disabled = True
+
             else:
+                # On sort du verrouillage => on redonne la main
+                self._temp_lock_active = False
                 self.power_button.disabled = False
+
             self.power_button._redraw()
         
         if self.parameter_name == "Ventilation":
