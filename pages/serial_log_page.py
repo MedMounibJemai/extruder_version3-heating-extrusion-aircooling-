@@ -90,7 +90,7 @@ class SerialLogPage(tk.Frame):
         self.text_widget.configure(state="disabled")
         self.text_widget.see(tk.END)
         #EXTRACTION DES DONNÉES POUR CSV (avec RPM)
-        val_pattern = r"Température:\s*([\d\.]+).*Consigne:\s*([\d\.]+).*PWM:\s*([\d\.]+).*RPM EXTR:\s*([\d\.]+).*VENT G:\s*([\d\.]+).*VENT C:\s*([\d\.]+).*VENT D:\s*([\d\.]+)"
+        val_pattern = r"Température:\s*([\d\.]+).*Consigne:\s*([\d\.]+).*PWM:\s*([\d\.]+).*RPM EXTR:\s*([\d\.]+).*RPM LF:\s*([\d\.]+).*RPM CF:\s*([\d\.]+).*RPM RF:\s*([\d\.]+)"
         match_val = re.search(val_pattern, message)
         if match_val:
             try:
