@@ -17,7 +17,8 @@ class PID_ATune:
         self.absMin = 0
         self.setpoint = 0
         self.outputStart = 0
-        self.lastInputs = [0] * 100  # Assuming a maximum lookback of 100
+        #self.lastInputs = [0] * 100  # Assuming a maximum lookback of 100
+        self.lastInputs = [0] * 101  # 101 au lieu de 100
         self.nLookBack = 40  # Default value for 10 seconds
         self.sampleTime = 250  # Default sample time in milliseconds
         self.peaks = [0] * 10

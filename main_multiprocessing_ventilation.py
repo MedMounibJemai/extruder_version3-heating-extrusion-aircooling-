@@ -17,9 +17,9 @@ from pages.serial_log_page import SerialLogPage
 from pages.config_window import ConfigWindow
 
 # Import des modules associés à chaque cadran
-from modules.systemchauffageMAX6675 import SystemeChauffageMAX6675  
-from modules.motor_extrusion_drv8825_class_multiprocessing import MoteurExtrusion
-from modules.motor_extrusion_drv8825_class_multiprocessing import run_motor_process  # à ajouter en haut, à côté de MoteurExtrusion
+from modules.systemchauffageMAX6675_barrel16mm import SystemeChauffageMAX6675  
+from modules.motor_dm860t import MoteurExtrusion
+from modules.motor_dm860t import run_motor_process  # à ajouter en haut, à côté de MoteurExtrusion
 from modules.systeme_ventilation import SystemeVentilation
 
 class PageManager(tk.Frame):
@@ -232,7 +232,12 @@ class PageManager(tk.Frame):
             print("Erreur update_chauffage:", e)
 
         # Rappel dans 1 seconde
-        self.after(1000, self.update_chauffage)
+        #self.after(1000, self.update_chauffage)
+
+        # update s'adapte selon le mode
+        status = self.chauffage.get_status()
+        interval = 250 if status.get("autotune", False) else 1000
+        self.after(interval, self.update_chauffage)
 
 
     def load_config(self):

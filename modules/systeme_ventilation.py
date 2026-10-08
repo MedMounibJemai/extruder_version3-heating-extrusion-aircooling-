@@ -28,7 +28,7 @@ class SystemeVentilation:
         (100, 6720),
     ]
 
-    def __init__(self, pin_right=23, pin_left=25, pin_center=26, pwm_freq=10000):
+    def __init__(self, pin_right=23, pin_left=25, pin_center=26, pwm_freq=10000):  #pwm_freq=25000 : non fonctionnelle (bad frequency)
         self.pins = {
             "right": pin_right,
             "left": pin_left,
