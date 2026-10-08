@@ -42,8 +42,8 @@ L’interface est optimisée pour un usage tactile sur écran 7".
 
  - La cartouche chauffante est alimentée par une **alimentation dédiée 24 V**  
  - Le moteur d’extrusion est alimenté par une alimentation dédiée selon la configuration :
-  - **NEMA17 (configuration initiale) :** alimentation 12 V.
-  - **NEMA23 avec gearbox (nouvelle configuration) :** alimentation 24 V – 8,8 A, connectée au driver DM860T ou DM542T. 
+    - **NEMA17 (configuration initiale) :** alimentation 12 V.
+    - **NEMA23 avec gearbox (nouvelle configuration) :** alimentation 24 V – 8,8 A, connectée au driver DM860T ou DM542T. 
  - Les ventilateurs sont alimentés par une **alimentation dédiée 12 V**  
  
  - Les trois alimentations sont **séparées** afin d’assurer la stabilité du système, de limiter les perturbations électriques et d’améliorer la sécurité.  
