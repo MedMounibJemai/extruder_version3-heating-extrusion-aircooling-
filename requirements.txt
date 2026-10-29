@@ -7,3 +7,5 @@ simple-pid
 board
 tk
 gpiozero
+lgpio
+spidev
