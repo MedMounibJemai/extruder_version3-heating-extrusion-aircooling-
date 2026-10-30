@@ -1,20 +1,3 @@
-"""
-Pilotage du moteur NEMA34 via driver DM860T (STEP/DIR), sur Raspberry Pi 5.
-
-Structure identique a l'ancienne classe DRV8825 (meme API process_command,
-meme calcul de measured_rpm, meme logique de rampe) - seul le driver bas
-niveau change de nom, et les broches par defaut correspondent a votre
-script de test valide (DIR=GPIO22, STEP=GPIO23, pas d'Enable cablee).
-
-IMPORTANT sur measured_rpm: en l'absence de capteur/encodeur physique,
-cette valeur n'est PAS une mesure reelle - c'est un CALCUL base sur le
-comptage des impulsions STEP que ce code envoie lui-meme, moyenne sur
-des fenetres d'1 seconde. Ca reflete fidelement la vitesse commandee
-tant que le moteur suit correctement les pas (pas de decrochage), mais
-ne detecterait pas un decrochage mecanique reel (ca necessiterait un
-vrai encodeur).
-"""
-
 import time
 import threading
 import queue
@@ -28,20 +11,12 @@ MotorDir = ['forward', 'backward']
 
 
 class DM860T_Driver:
-    """
-    Driver minimal DM860T (STEP/DIR) compatible Raspberry Pi 5 via gpiozero.
-
-    - garde digital_write(pin, value), Stop(), SetMicroStep() (no-op, le
-      microstep du DM860T se regle physiquement via les DIP switch)
-    - enable_pin=None par defaut, car votre script de test valide ne
-      cable/utilise pas cette broche (DM860T actif en permanence)
-    """
 
     def __init__(self, dir_pin: int, step_pin: int, enable_pin=None, mode_pins=None):
         self.dir_pin = dir_pin
         self.step_pin = step_pin
-        self.enable_pin = enable_pin  # None si EN non cablee (comme votre test)
-        self.mode_pins = mode_pins    # non utilise (microstep regle via DIP switch)
+        self.enable_pin = enable_pin  # non cablé
+        self.mode_pins = mode_pins    # non utilisé (microstep reglé via DIP switch)
 
         self._dir = DigitalOutputDevice(self.dir_pin, initial_value=False)
         self._step = DigitalOutputDevice(self.step_pin, initial_value=False)
@@ -51,7 +26,7 @@ class DM860T_Driver:
             self._en = DigitalOutputDevice(self.enable_pin, initial_value=False)
 
     def SetMicroStep(self, *_args, **_kwargs):
-        # Microstep regle par DIP switch sur le DM860T -> rien a faire cote logiciel
+        # Microstep reglé par DIP switch sur le DM860T -> rien a faire coté logiciel
         return
 
     def digital_write(self, pin, value: int):
@@ -84,24 +59,16 @@ class DM860T_Driver:
 
 
 class MoteurExtrusion:
-    """
-    Classe de haut niveau pour le controle du moteur d'extrusion NEMA34/DM860T.
-    Meme logique que l'ancienne version DRV8825: rampe, timing des pas,
-    measured_rpm (calcule, pas mesure physiquement), commandes 'EXTRUDER:*',
-    prete pour multiprocessing.
-    """
-
+ 
     def __init__(
         self,
-        dir_pin=22,             # broches validees dans votre script de test
+        dir_pin=22,             
         step_pin=16,
-        enable_pin=None,        # non cablee dans votre test
+        enable_pin=None,        
         mode_pins=None,
         motor_ui=None,
         steps_per_rev=200,      # NEMA34 typique: 1.8deg/pas -> 200 pas/tour
-        microstep_mode='1/4step',  # DOIT correspondre au reglage DIP switch du DM860T   #changé a 1/4 au lieu de 1/8
-                                     # (verifie: SW5-8 = ON,OFF,ON,ON -> 1600 pulses/tour
-                                     #  = 200 pas x 8 -> 1/8 step, PAS 1/16)
+        microstep_mode='1/4step',  # DOIT correspondre au reglage DIP switch du DM860T   
         max_rpm=75.0,
         default_rpm=10.0,
         control_enabled=True,
@@ -129,14 +96,14 @@ class MoteurExtrusion:
         self.temp_value = None
         self.temp_target = None
 
-        # --- Driver DM860T (gpiozero, Pi 5) ---
+        # --- Driver DM860T ---
         self.driver = DM860T_Driver(
             dir_pin=dir_pin,
             step_pin=step_pin,
             enable_pin=enable_pin,
             mode_pins=mode_pins
         )
-        self.driver.SetMicroStep('hardware', microstep_mode)  # no-op (compat)
+        self.driver.SetMicroStep('hardware', microstep_mode)  
 
         self.driver.digital_write(self.driver.dir_pin, 0)
 
@@ -148,14 +115,7 @@ class MoteurExtrusion:
         self._thread.start()
 
     def process_command(self, command: str):
-        """
-        Commandes attendues:
-          - EXTRUDER:ON
-          - EXTRUDER:OFF
-          - EXTRUDER:REVERSE   (inverse le sens de rotation, prend effet immediatement
-                                 meme si le moteur tourne deja - utile en cas de blocage)
-          - EXTRUDER:<rpm>
-        """
+       
         try:
             if command == 'EXTRUDER:ON':
                 with self._lock:
@@ -251,7 +211,7 @@ class MoteurExtrusion:
 
         period = 1.0 / step_freq
 
-        min_period = 0.0001  # 100 us, garde-fou identique a l'ancien code
+        min_period = 0.0001  # 100 us
         return max(min_period, period)
 
     def _run(self):
@@ -261,7 +221,7 @@ class MoteurExtrusion:
         last_step_time = time.time()
         step_count = 0
         rpm_window_start = time.perf_counter()
-        direction_appliquee = None  # sens reellement ecrit sur la broche DIR
+        direction_appliquee = None  
 
         while self.running:
             now = time.time()
@@ -277,9 +237,7 @@ class MoteurExtrusion:
                 self.driver.digital_write(self.driver.enable_pin, 1)
                 hw_enabled = True
 
-            # Applique le sens des qu'il change, INDEPENDAMMENT de l'etat
-            # enabled/hw_enabled - permet l'inversion "a chaud" en cas de
-            # blocage, sans devoir couper puis rallumer le moteur.
+            
             if direction != direction_appliquee:
                 if direction == MotorDir[1]:
                     self.driver.digital_write(self.driver.dir_pin, 0)
@@ -299,7 +257,7 @@ class MoteurExtrusion:
                 time.sleep(0.01)
                 continue
 
-            # Rampe (identique a l'ancien code)
+            
             max_delta = self.ramp_rpm_per_sec * dt
             if self.current_rpm < target:
                 self.current_rpm = min(target, self.current_rpm + max_delta)
@@ -323,7 +281,7 @@ class MoteurExtrusion:
                     step_count += 1
                     last_step_time = time.time()
 
-                    # --- Calcul de measured_rpm (PAS une mesure physique -
+                    # --- Calcul de measured_rpm 
                     # comptage des pas reellement envoyes sur une fenetre 1s) ---
                     now_perf = time.perf_counter()
                     dt_window = now_perf - rpm_window_start
@@ -352,14 +310,7 @@ class MoteurExtrusion:
 
 
 def run_motor_process(cmd_queue, status_queue):
-    """
-    Process separe (multiprocessing).
-    Broches DM860T selon votre script de test valide:
-      - DIR  = GPIO22
-      - STEP = GPIO23
-      - EN   = non cablee => enable_pin=None
-      - Microstep regle via DIP switch => mode_pins=None
-    """
+    
     moteur = MoteurExtrusion(
         motor_ui=None,
         dir_pin=22,
@@ -367,7 +318,7 @@ def run_motor_process(cmd_queue, status_queue):
         enable_pin=None,
         mode_pins=None,
         steps_per_rev=200,
-        microstep_mode='1/8step',  # DOIT matcher vos DIP switch DM860T (SW5-8: ON,OFF,ON,ON = 1600 pulses/tour)
+        microstep_mode='1/4step',  # DOIT matcher avec DIP switch DM860T 
         max_rpm=250.0,
         default_rpm=10.0,
         control_enabled=True,

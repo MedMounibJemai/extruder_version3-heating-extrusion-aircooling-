@@ -26,7 +26,7 @@ try:
     while True:
         temp = read_max6675()
         if temp is None:
-            print("⚠️ Thermocouple non détecté")
+            print(" Thermocouple non détecté")
         else:
             print(f"Température : {temp:.2f} °C")
         time.sleep(1)

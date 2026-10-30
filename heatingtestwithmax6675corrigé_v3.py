@@ -25,15 +25,8 @@ if not os.path.exists(pid_filename):
 MOSFET_PIN = 6  # Broche GPIO pour le mosfet (PWM)
 mosfet = PWMOutputDevice(MOSFET_PIN, frequency=100, initial_value=0)
  
-# --- Configuration du MAX6675 via SPI (CE0 = GPIO8) ---
-# Câblage:
-#   SCK  -> GPIO11 (pin 23)
-#   SO   -> GPIO9  (pin 21 / MISO)
-#   CS   -> CE0 = GPIO8 (pin 24)
-#   MOSI -> GPIO10 (pin 19) non utilisé par MAX6675
- 
 SPI_BUS = 0
-SPI_DEVICE = 0  # 0 => CE0 (/dev/spidev0.0)
+SPI_DEVICE = 0  # CE0
  
 spi = spidev.SpiDev()
 spi.open(SPI_BUS, SPI_DEVICE)
@@ -49,7 +42,6 @@ chauffage_active = False  # Chauffage activé
 autotune_start_time = None  # Horodatage de lancement de l'autotune (pour calculer la durée)
  
 # --- Initialisation du PID ---
-# Lire les valeurs PID depuis le fichier
 with open(pid_filename, "r") as f:
     pid_values = f.read().strip().split(",")
     kp, ki, kd = float(pid_values[0]), float(pid_values[1]), float(pid_values[2])
@@ -57,7 +49,7 @@ with open(pid_filename, "r") as f:
 pid = PID(kp, ki, kd, setpoint=setpoint)
 pid.output_limits = (0, 100)  # Limite la sortie entre 0% et 100%
 pid.sample_time = 1.0
-#pid.set_auto_mode(True, last_output=output_pwm)  # Démarrer avec la dernière sortie PWM
+
 pid.set_auto_mode(False, last_output=0)
  
 def autotune_output_writer(x):
@@ -69,11 +61,7 @@ pid_atune = PID_ATune(lambda: current_temp, autotune_output_writer)
  
 # --- Lecture MAX6675 via spidev ---
 def max6675_read_celsius():
-    """
-    MAX6675 retourne 16 bits.
-    - D2 = 1 => thermocouple ouvert
-    - D15..D3 => température * 4 (pas de 0.25°C)
-    """
+    
     data = spi.xfer2([0x00, 0x00])  # lire 16 bits
     value = (data[0] << 8) | data[1]
  
@@ -90,23 +78,23 @@ def read_temperature():
         temp = max6675_read_celsius()
         return temp
     except Exception as e:
-        append_flux(f"❌ Erreur lecture température (MAX6675/spidev): {e}")
-        #return 25.0
+        append_flux(f" Erreur lecture température (MAX6675/spidev): {e}")
+        
         return None
  
 # --- Fonction pour appliquer le PWM au mosfet ---
 def set_pwm(value):
-    """Applique une valeur PWM entre 0 et 100%"""
+    
     try:
-        # Convertir 0-100% en 0.0-1.0 et limiter
+        
         pwm_value = max(0, min(1, value / 100.0))
         mosfet.value = pwm_value
     except Exception as e:
-        append_flux(f"❌ Erreur PWM: {e}")
+        append_flux(f" Erreur PWM: {e}")
  
 # --- Fonction utilitaire pour formater une durée en secondes ---
 def format_duration(seconds):
-    """Formate une durée en secondes -> '12.3s' ou '2min 05.3s'"""
+    
     minutes = int(seconds // 60)
     secs = seconds % 60
     if minutes > 0:
@@ -127,31 +115,31 @@ def process_command(command):
         pid_atune.SetNoiseBand(0.5)  # Bande de bruit en °C
         pid_atune.SetLookbackSec(20)  # Durée d'observation en secondes
         autotune_start_time = datetime.now()
-        append_flux(f"🔄 Lancement de l'autotune PID... (début: {autotune_start_time.strftime('%H:%M:%S')}, T={current_temp:.1f}°C)")
+        append_flux(f" Lancement de l'autotune PID... (début: {autotune_start_time.strftime('%H:%M:%S')}, T={current_temp:.1f}°C)")
     elif command.startswith("SETPOINT:"):
         setpoint = float(command.split(":")[1])
         pid.setpoint = setpoint
-        append_flux(f"🎯 Nouvelle consigne : {setpoint} °C")
+        append_flux(f" Nouvelle consigne : {setpoint} °C")
     elif command.startswith("SETPID:"):
         params = command.split(":")[1].split(",")
         kp, ki, kd = float(params[0]), float(params[1]), float(params[2])
         pid.tunings = (kp, ki, kd)
-        append_flux(f"🔧 Paramètres PID mis à jour : Kp={kp}, Ki={ki}, Kd={kd}")
+        append_flux(f" Paramètres PID mis à jour : Kp={kp}, Ki={ki}, Kd={kd}")
     elif command == "DEMARRER":
         chauffage_active = True
         pid.auto_mode = True
-        append_flux("🔥 Chauffage ACTIVÉ !")
+        append_flux(" Chauffage ACTIVÉ !")
     elif command == "STOP":
         if autotune_mode and autotune_start_time is not None:
             duree = (datetime.now() - autotune_start_time).total_seconds()
-            append_flux(f"⏹️ Autotune interrompu manuellement après {format_duration(duree)}")
+            append_flux(f" Autotune interrompu manuellement après {format_duration(duree)}")
         autotune_mode = False
         chauffage_active = False
         pid.auto_mode = False
         output_pwm = 0
         autotune_start_time = None
         set_pwm(0)
-        append_flux("🛑 Chauffage ARRÊTÉ !")
+        append_flux(" Chauffage ARRÊTÉ !")
  
 # --- Fonction pour appliquer les paramètres PID depuis le fichier ---
 def appliquer_pid_depuis_fichier():
@@ -159,17 +147,15 @@ def appliquer_pid_depuis_fichier():
         with open(pid_filename, "r") as f:
             content = f.read().strip()  # Format attendu: "Kp,Ki,Kd"
         process_command(f"SETPID:{content}")
-        append_flux(f"🔧 Paramètres PID appliqués depuis le fichier : {content}")
+        append_flux(f" Paramètres PID appliqués depuis le fichier : {content}")
     except Exception as e:
-        append_flux(f"❌ Erreur lors de la lecture du fichier {pid_filename}: {e}")
+        append_flux(f" Erreur lors de la lecture du fichier {pid_filename}: {e}")
  
 # --- Interface Tkinter ---
 root = tk.Tk()
 root.title("Chauffage avec option PID Autotune")
  
-# --- Zone de flux série (ScrolledText) ---
-# flux_text = scrolledtext.ScrolledText(root, wrap=tk.WORD)
-# flux_text.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
 flux_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=8)
 flux_text.pack(side=tk.BOTTOM, fill=tk.X, expand=False, padx=5, pady=5)
 flux_text.config(state='disabled')
@@ -214,7 +200,7 @@ def toggle_flux():
         flux_text.pack_forget()
         show_flux.set(False)
     else:
-        #flux_text.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
         flux_text.pack(side=tk.BOTTOM, fill=tk.X, expand=False, padx=5, pady=5)
         show_flux.set(True)
 affichage_menu.add_command(label="Afficher/Masquer flux série", command=toggle_flux)
@@ -317,22 +303,18 @@ def update(frame):
     if autotune_mode:
         tune_status = pid_atune.Runtime()
         output_pwm = max(0, min(100, output_pwm))
-        # if output_pwm < 0:
-        #     output_pwm = 0
+        
  
         set_pwm(output_pwm)
  
-        #append_flux(f"🔄 Autotune en cours... Température: {current_temp:.1f} °C | PWM: {output_pwm:.1f}%")
+        
  
         if tune_status != 0:
             kp_classic = pid_atune.GetKp()
             ki_classic = pid_atune.GetKi()
             kd_classic = pid_atune.GetKd()
  
-            # --- Reconstruction du gain ultime Ku et de la période ultime Pu ---
-            # PID_ATune renvoie des gains calculés avec la règle "PID classique"
-            # de Ziegler-Nichols : Kp = 0.6*Ku ; Ti = Kp/Ki = Pu/2 ; Td = Kd/Kp = Pu/8
-            # On peut donc retrouver Ku et Pu à partir de ces 3 valeurs.
+            
             Ku = kp_classic / 0.6 if kp_classic else 0
             Pu_from_ki = 2 * (kp_classic / ki_classic) if ki_classic else 0
             Pu_from_kd = 8 * (kd_classic / kp_classic) if kp_classic else 0
@@ -341,15 +323,7 @@ def update(frame):
             else:
                 Pu = max(Pu_from_ki, Pu_from_kd)
  
-            # --- Réglage Tyreus-Luyben à partir de Ku/Pu (au lieu du ZN classique) ---
-            # La règle "classic PID" de Ziegler-Nichols vise une décroissance
-            # d'amplitude 1/4 : c'est volontairement oscillatoire, et pour un
-            # procédé lent/à forte inertie comme une cartouche chauffante, ça se
-            # traduit par un cycle limite qui ne s'amortit jamais autour de la
-            # consigne. Tyreus-Luyben utilise les mêmes Ku/Pu mesurés par le test
-            # à relais mais avec des coefficients moins agressifs (Kp plus faible,
-            # action intégrale beaucoup plus lente), ce qui stabilise la
-            # température au lieu de la faire osciller en continu.
+            
             kp = Ku / 2.2
             Ti_tl = 2.2 * Pu
             Td_tl = Pu / 6.3
@@ -366,14 +340,14 @@ def update(frame):
             else:
                 duree_str = "inconnue"
  
-            append_flux(f"✅ Autotune terminé ! (fin: {fin_time.strftime('%H:%M:%S')}, durée: {duree_str}) Ku≈{Ku:.2f}, Pu≈{Pu:.1f}s")
+            append_flux(f"   Autotune terminé ! (fin: {fin_time.strftime('%H:%M:%S')}, durée: {duree_str}) Ku≈{Ku:.2f}, Pu≈{Pu:.1f}s")
             append_flux(f"   Ziegler-Nichols classique (référence, non appliqué) : Kp={kp_classic:.2f}, Ki={ki_classic:.3f}, Kd={kd_classic:.2f}")
             append_flux(f"   Tyreus-Luyben (appliqué) : Kp={kp:.2f}, Ki={ki:.3f}, Kd={kd:.2f}")
             autotune_start_time = None
  
             with open(pid_filename, "w") as f:
                 f.write(f"{kp},{ki},{kd}")
-            append_flux(f"💾 Nouvelles valeurs PID (Tyreus-Luyben) sauvegardées dans {pid_filename}")
+            append_flux(f" Nouvelles valeurs PID (Tyreus-Luyben) sauvegardées dans {pid_filename}")
     #changement ici 07/09/2026
     elif chauffage_active:
         output_pwm = pid(current_temp)
@@ -404,11 +378,11 @@ def update(frame):
     return line_temp, line_setpoint, line_pwm
  
 ani = animation.FuncAnimation(fig, update, interval=500, blit=False)
-#ani = animation.FuncAnimation(fig, update, interval=1000, blit=False)
+
  
 # --- Fonction de fermeture ---
 def on_closing():
-    print("🚪 Fermeture de l'application...")
+    print(" Fermeture de l'application...")
     mosfet.value = 0  # Éteindre le MOSFET
     mosfet.close()  # Libérer la ressource GPIO
     try:

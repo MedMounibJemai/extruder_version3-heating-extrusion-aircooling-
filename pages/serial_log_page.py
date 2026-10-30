@@ -5,11 +5,7 @@ import time
 import re
 
 class SerialLogPage(tk.Frame):
-    """
-    Affiche en temps réel les messages du port série et permet d'exporter les données dans un CSV.
-    Les étiquettes "Température:", "Consigne:" et "PWM:" sont colorées (bleu, rouge, vert),
-    le reste est en noir. On limite l'affichage à 200 lignes.
-    """
+    
     def __init__(self, parent, **kwargs):
         kwargs.setdefault("bg", "white")
         super().__init__(parent, **kwargs)
@@ -74,8 +70,7 @@ class SerialLogPage(tk.Frame):
                 elif label == "RPM EXTR:": #nouveau
                     self.text_widget.insert(tk.END, label, "rpm_extruder_label")
                 elif label in ["RPM LF:", "RPM CF:", "RPM RF:"]:
-                    # Créer un nouveau tag pour les ventilateurs si vous voulez une couleur spécifique
-                    # Par défaut, on utilise "default" ou on peut créer un tag "vent_label"
+                    
                     self.text_widget.insert(tk.END, label, "default")
                 
                 start_idx = match.end()

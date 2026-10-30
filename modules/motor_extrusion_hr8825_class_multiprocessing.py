@@ -1,5 +1,3 @@
-# modules/moteur_extrusion.py
-
 import time
 import threading
 import queue
@@ -9,10 +7,7 @@ MotorDir = ['forward', 'backward']
 
 
 class MoteurExtrusion:
-    """
-    Classe de haut niveau pour le contrôle du moteur d'extrusion.
-    Version corrigée avec la même logique que test_stepper.py
-    """
+   
 
     def __init__(
         self,
@@ -68,10 +63,7 @@ class MoteurExtrusion:
         self._thread.start()
 
     def process_command(self, command: str):
-        """
-        Gère les commandes reçues de l'UI.
-        CORRECTION : Ne met pas enabled=True immédiatement pour EXTRUDER:ON
-        """
+        
         try:
             if command == 'EXTRUDER:ON':
                 # Juste activer le flag, le thread gère l'ENABLE
@@ -138,9 +130,7 @@ class MoteurExtrusion:
         return mapping.get(mode, 1)
 
     def _compute_stepdelay(self, rpm: float) -> float:
-        """
-        Version basée sur ton script fluide : on calcule la PÉRIODE entre deux steps.
-        """
+        
         if rpm <= 0:
             return 0.0
         
@@ -150,20 +140,15 @@ class MoteurExtrusion:
         if step_freq <= 0:
             return 0.0
             
-        # 🔥 Période = 1 / fréquence (temps entre le début de chaque step)
+        # Période = 1 / fréquence (temps entre le début de chaque step)
         period = 1.0 / step_freq
         
-        # 🔥 LIMITE : ne pas descendre en dessous de 100 µs à très haute vitesse
+        # LIMITE : ne pas descendre en dessous de 100 µs à très haute vitesse
         min_period = 0.0001  # 100 µs =0.0001
         return max(min_period, period)
 
     def _run(self):
-        """
-        Boucle temps réel inspirée de ton script fluide :
-        - rampe d'accélération
-        - contrôle fin du timing entre steps (step_period)
-        - pulses très courts sur STEP
-        """
+        
         ramp_rpm_per_sec = 200.0
         last_time = time.time()
         hw_enabled = False  
@@ -180,7 +165,7 @@ class MoteurExtrusion:
             dt = now - last_time
             last_time = now
 
-            # Lecture de l'état demandé (protégé par le lock)
+            
             with self._lock:
                 enabled = self.enabled
                 target = self.target_rpm
@@ -227,7 +212,7 @@ class MoteurExtrusion:
                 # On génère un step
                 try:
                     self.driver.digital_write(self.driver.step_pin, 1)
-                    #time.sleep(pulse_duration)
+                    
                     self.driver.digital_write(self.driver.step_pin, 0)
                     step_count += 1 #compteur nombre de step
                     last_step_time = time.time()
@@ -238,7 +223,7 @@ class MoteurExtrusion:
                         steps_per_rev_effective = self.steps_per_rev * self.microstep_factor  # 200 * 16 = 3200
                         step_freq = step_count / dt_window  # steps/sec
                         rpm_meas = (step_freq / steps_per_rev_effective) * 60.0
-                        #print(f"[RPM] dt={dt_window:.3f}s steps={step_count} f={step_freq:.1f}Hz rpm={rpm_meas:.2f} target={self.target_rpm:.2f}")
+                        
 
                         with self._lock:
                             self.measured_rpm = rpm_meas
@@ -250,7 +235,7 @@ class MoteurExtrusion:
                     print(f"❌ Erreur génération step: {e}")
                     time.sleep(0.01)
             else:
-                # 🔥 Attente adaptative pour garder un timing précis
+               
                 time_remaining = step_period - time_since_last_step
 
                 if time_remaining > 0.0005:  # > 500 µs
@@ -260,17 +245,9 @@ class MoteurExtrusion:
                         time.sleep(time_remaining * 0.3)
 
 def run_motor_process(cmd_queue, status_queue):
-        """
-        Fonction exécutée dans un PROCESSUS séparé.
-        - Reçoit les commandes de la GUI via cmd_queue (EXTRUDER:ON/OFF/NN).
-        - Met à jour le moteur via MoteurExtrusion.
-        - Envoie régulièrement l'état via status_queue.
-        """
-        # ⚠️ Importer ici tout ce qui dépend du hardware est déjà fait en haut du module (HR8825)
-
-        # Création de l'objet moteur SANS interface graphique
+       
         moteur = MoteurExtrusion(
-            motor_ui=None,           # Très important : aucun widget Tkinter ici
+            motor_ui=None,           
             dir_pin=13,
             step_pin=19,
             enable_pin=12,
@@ -305,7 +282,7 @@ def run_motor_process(cmd_queue, status_queue):
                     try:
                         status_queue.put_nowait(status)
                     except queue.Full:
-                        # Si jamais la queue est pleine, on ignore (la GUI rattrapera plus tard)
+                        # Si jamais la queue est pleine, on ignore 
                         pass
                     last_status_time = now
 

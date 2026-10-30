@@ -4,7 +4,7 @@ import sys
 
 from pages.parameter_ui_ventilation import ParameterUI
 
-# --- Police (comme dans ton UI) ---
+
 if sys.platform.startswith('win'):
     FONT_PATH = "C:/Windows/Fonts/arial.ttf"
 else:
@@ -12,10 +12,7 @@ else:
 
 
 class AAFanSelector(tk.Canvas):
-    """
-    Sélecteur 3 positions LF/RF/CF style 'pill' (arrondi + anti-aliasing via PIL),
-    sans séparateurs visibles. Click = change selected + callback(value)
-    """
+    
     def __init__(self, parent, items, command=None,
                  width=220, height=28,
                  radius=14,
@@ -268,19 +265,19 @@ class ParameterPage(tk.Frame):
         def on_pick(value):
             self._set_vent_selected(value)
 
-        self.sel_frame = tk.Frame(self.vent_ui, bg="#FFFFFF")  # IMPORTANT: parent = self.vent_ui
+        self.sel_frame = tk.Frame(self.vent_ui, bg="#FFFFFF")  
         self.vent_selector = AAFanSelector(
             self.sel_frame,
             items=[("LF", "left"), ("CF", "center"), ("RF", "right")],
             command=on_pick,
-            width=190, height=24,  # tu peux ajuster
+            width=190, height=24,  
             bg="#FFFFFF"
         )
         self.vent_selector.pack()
 
-        # Placement initial + reposition auto
+       
         self.sel_frame.place(relx=0.5, rely=0.76, anchor="center")
-        #self.vent_ui.bind("<Configure>", lambda e: self._place_vent_selector())
+        
 
         # Sync état initial
         self.vent_selector.set(self.vent_selected.get())
@@ -326,7 +323,7 @@ class ParameterPage(tk.Frame):
         self.vent_ui.target_value = st["duty"]
         self.vent_ui.power_on = st["on"]
         self.vent_ui.power_button.state = st["on"]
-        # ✅ restaurer RPM affiché
+        # restaurer RPM affiché
         self.vent_ui.rpm_est_value = st.get("rpm", 0.0)
         self.vent_ui.update_display()
 
@@ -344,9 +341,7 @@ class ParameterPage(tk.Frame):
         # sync visuel selector
         self.vent_selector.set(fan_key)
 
-        # info optionnelle vers main
-        # if self.serial_callback:
-        #     self.serial_callback(f"VENTILATION_SELECT:{fan_key}")
+        
     
     def _estimate_rpm(self, fan: str, duty: float) -> float:
         curve_7500 = [(0,0),(20,1770),(40,3506),(60,5040),(80,6300),(100,7410)]
@@ -365,44 +360,16 @@ class ParameterPage(tk.Frame):
                 return float(y0 + t*(y1-y0))
         return float(pts[-1][1])
 
-
-    # -----------------------------------------------------------------
-    # VENT : callback vers main (ajoute le fan)
-    # def _vent_serial_callback(self, msg: str):
-    #     """
-    #     msg venant du cadran: ex 'POWER:1' ou 'DUTY:45'
-    #     -> VENT:<fan>:POWER:1  ou VENT:<fan>:DUTY:45
-    #     """
-    #     fan = self.vent_selected.get()  # "left" | "center" | "right"
-    #     # Update immédiat du RPM estimé dans le cadran (quand duty change)
-    #     if msg.startswith("DUTY:"):
-    #         try:
-    #             duty = float(msg.split(":")[1])
-    #             self.vent_ui.rpm_est_value = self._estimate_rpm(fan, duty) if self.vent_ui.power_on else 0.0
-    #             self.vent_ui.update_display()
-    #         except Exception:
-    #             pass
-
-    #     # POWER OFF -> rpm=0 immédiat
-    #     if msg == "POWER:0":
-    #         self.vent_ui.rpm_est_value = 0.0
-    #         self.vent_ui.update_display()
-
-    #     if self.serial_callback:
-    #         self.serial_callback(f"VENT:{fan}:{msg}")
     def _vent_serial_callback(self, msg: str):
-        """
-        msg venant du cadran Ventilation: ex 'POWER:1' ou 'DUTY:45'
-        => on convertit en 'VENT:<fan>:<action>:<value>'
-        """
+        
         fan = self.vent_selected.get()
 
         try:
-            action, value = msg.split(":", 1)   # "POWER","1" ou "DUTY","45"
+            action, value = msg.split(":", 1)   
         except ValueError:
             return
 
-        # Update immédiat du RPM estimé dans le cadran (quand duty change)
+        # Update immédiat du RPM estimé dans le cadran 
         if msg.startswith("DUTY:"):
             try:
                 duty = float(msg.split(":")[1])

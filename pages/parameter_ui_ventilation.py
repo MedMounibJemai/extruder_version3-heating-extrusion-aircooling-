@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageDraw, ImageFont, ImageTk
 
-# Détection de la plateforme pour choisir le chemin de la police
+
 if sys.platform.startswith('win'):
     font_path = "C:/Windows/Fonts/arial.ttf"
 else:
@@ -95,19 +95,18 @@ class NumericKeypad(tk.Toplevel):
         ####################
         # --- Focus + comportement tactile ---
         self.transient(parent)     # au-dessus de la fenêtre parent
-        #self.grab_set()            # modal (évite clics derrière)
         self.lift()                # ramener au premier plan
         self.entry.focus_set()     # focus sur l'entrée
-        # ⚠️ grab_set() après que la fenêtre soit visible
+        
         self.after(0, self._apply_grab)
 
     def _apply_grab(self):
         try:
             self.grab_set()
         except tk.TclError:
-            # Si encore pas viewable, on réessaie très vite
+            
             self.after(10, self._apply_grab)
-        ####################
+        
     def append_digit(self, digit):
         self.entry_value.set(self.entry_value.get() + digit)
 
@@ -218,10 +217,7 @@ class AAOnOffButton(tk.Canvas):
         self.create_image(0, 0, anchor=tk.NW, image=self._photo)
 
 class ParameterUI(tk.Frame):
-    """
-    Cadran de paramètre (Température, Vitesse Moteur, Refroidissement).
-    Le nom du cadran n'est plus dessiné dans le canvas (il est prévu à l'extérieur).
-    """
+    
     def __init__(self, parent,
                  max_value, unit,
                  full_color, pale_color,
@@ -246,7 +242,7 @@ class ParameterUI(tk.Frame):
         self.serial_callback = serial_callback
         self.pwm_value = 0
         self.rpm_est_value = 0.0  # pour Ventilation (RPM estimé)
-        self._temp_lock_active = False  # évite d'envoyer EXTRUDER:OFF en boucle
+        self._temp_lock_active = False  # pour ne pas envoyer EXTRUDER:OFF en boucle
 
 
         self.temp_value = None
@@ -390,7 +386,7 @@ class ParameterUI(tk.Frame):
 
 
     def _open_keypad(self, event):
-        # ❌ Si le cadran est OFF → on ne fait rien
+        # si le cadran est OFF → on ne fait rien
         if not self.power_on:   
             return
         if self._keypad is not None and tk.Toplevel.winfo_exists(self._keypad):

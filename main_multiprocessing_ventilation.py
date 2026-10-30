@@ -10,7 +10,7 @@ from gpiozero.pins.lgpio import LGPIOFactory
 from gpiozero import Device
 Device.pin_factory = LGPIOFactory()
 
-# Import des pages modifiées qui intègrent le nom du cadran à l'extérieur
+
 from pages.parameter_page_ventilation import ParameterPage
 from pages.curve_temp_ui import CurveTempUI
 from pages.serial_log_page import SerialLogPage
@@ -109,13 +109,7 @@ class PageManager(tk.Frame):
         self.current_page = 0
         self._show_page(0)
 
-        # # 🔗 Connecter le chauffage à la page Serial Log
-        # try:
-        # # Si SystemeChauffage a un attribut ou un paramètre serial_callback
-        #     self.chauffage.serial_callback = page2.append_message
-        # except Exception as e:
-        #     print("⚠️ Impossible d'attacher serial_callback au chauffage :", e)
-
+        
         initial_setpoint = self.pages[0].temp_ui.target_value
         self.handle_ui_action(f"SETPOINT:{initial_setpoint}")
         pid_params = self.config_data["Température"]
@@ -148,7 +142,7 @@ class PageManager(tk.Frame):
         pid_params = self.config_data["Température"]
         self.handle_ui_action(f"SETPID:{pid_params['Kp']},{pid_params['Ki']},{pid_params['Kd']}")
     
-    def handle_ui_action(self, action_str): #donc cette méthode va coopler le back avec le front ??
+    def handle_ui_action(self, action_str): #donc cette méthode va coopler le back avec le front 
         print(f"[Action reçue] → {action_str}")
 
         try:
@@ -158,11 +152,11 @@ class PageManager(tk.Frame):
                 self.chauffage.process_command(action_str)   
 
             elif action_str.startswith("EXTRUDER:"):
-                # On n'appelle plus la classe moteur directement : on envoie la commande au process moteur
+                
                 if self.cmd_queue_moteur is not None:
                     self.cmd_queue_moteur.put(action_str)
                 else:
-                    print("⚠️ cmd_queue_moteur est None, impossible d'envoyer la commande moteur.")
+                    print(" cmd_queue_moteur est None, impossible d'envoyer la commande moteur.")
 
             elif action_str.startswith("VENT:"):
                 self.ventilation.process_command(action_str)
@@ -181,7 +175,7 @@ class PageManager(tk.Frame):
             setpoint = data['setpoint']
             pwm = data['pwm']
 
-            # 🔴 Affiche température réelle dans la jauge
+            # Affiche température réelle dans la jauge
             self.pages[0].temp_ui.current_value = temperature
             self.pages[0].temp_ui.pwm_value = pwm
             self.pages[0].temp_ui.update_display()
@@ -199,27 +193,25 @@ class PageManager(tk.Frame):
 
             status_moteur = self.last_motor_status
             
-            # 🔄 Mise à jour de l'interface moteur avec la vitesse actuelle
-            # current_rpm = status_moteur.get('current_rpm', 0.0)
-            # self.pages[0].motor_ui.current_value = current_rpm
+            
             measured_rpm = status_moteur.get('measured_rpm', 0.0)
             self.pages[0].motor_ui.current_value = measured_rpm
 
-            # 🔄 Synchronisation température pour l'affichage "Température Limite"
+            # Synchronisation température pour l'affichage "Température Limite"
             self.pages[0].motor_ui.temp_value = temperature
             self.pages[0].motor_ui.temp_target = setpoint
             self.pages[0].motor_ui.control_enabled = True   
 
-            # 📊 Récupération de l'état des ventilateurs
+            # Récupération de l'état des ventilateurs
             vent_status = self.ventilation.get_status()
 
-            # 📊 LOG SERIAL : Ajouter RPM mesuré
+            # LOG SERIAL : Ajouter RPM mesuré
             if self.pages[2]:  # Vérifier que SerialLogPage existe
                 # Format: "Température: XX.X°C | Consigne: XX.X°C | PWM: XX.X% | RPM EXTRUDER: XX.Xtr/min"
                 log_message = f"Température: {temperature:6.1f}°C | Consigne: {setpoint:6.1f}°C | PWM: {pwm:5.1f}% | RPM EXTR: {measured_rpm:6.1f}tr/min | RPM LF: {vent_status['left']['rpm_est']:6.1f}tr/min | RPM CF: {vent_status['center']['rpm_est']:6.1f}tr/min | RPM RF: {vent_status['right']['rpm_est']:6.1f}tr/min"
                 self.pages[2].append_message(log_message)
 
-           # 📊 Envoie les données à la courbe SEULEMENT si le chauffage est actif
+           #  Envoie les données à la courbe SEULEMENT si le chauffage est actif
             status_chauffage = self.chauffage.get_status()
             if status_chauffage.get("active", False):
                 self.pages[1].add_data(temperature, setpoint, pwm)
@@ -231,8 +223,7 @@ class PageManager(tk.Frame):
         except Exception as e:
             print("Erreur update_chauffage:", e)
 
-        # Rappel dans 1 seconde
-        #self.after(1000, self.update_chauffage)
+       
 
         # update s'adapte selon le mode
         status = self.chauffage.get_status()
@@ -271,66 +262,30 @@ def merge_config(original, new):
         else:
             original[key] = value
             
-# def on_closing(root, manager=None, motor_process=None):
-#     """
-#     Callback appelé quand on ferme la fenêtre.
-#     - Arrête proprement le chauffage (si présent)
-#     - Termine le process moteur (si présent)
-#     - Ferme la fenêtre Tkinter
-#     """
-#     print("Fermeture de l'application...")
 
-#     # 1) Arrêt du chauffage
-#     try:
-#         if manager is not None and hasattr(manager, "chauffage"):
-#             manager.chauffage.close()
-#     except Exception as e:
-#         print(f"Erreur lors de l'arrêt du chauffage : {e}")
-
-#     # 2) Arrêt du processus moteur
-#     try:
-#         if motor_process is not None and motor_process.is_alive():
-#             print("Arrêt du process moteur...")
-#             motor_process.terminate()
-#             motor_process.join(timeout=1.0)
-#     except Exception as e:
-#         print(f"Erreur lors de l'arrêt du moteur (processus) : {e}")
-
-#     # 3) Arrêt de ventilation - CORRECTION : utiliser 'manager' au lieu de 'self'
-#     try:
-#         if manager is not None and hasattr(manager, "ventilation"):
-#             manager.ventilation.close()
-#             print("Ventilation arrêtée avec succès")
-#     except Exception as e:
-#         print(f"⚠️ ventilation.close() failed: {e}")
-
-#     # 4) Fermeture de la fenêtre Tkinter
-#     root.destroy()
 def on_closing(root, manager=None, motor_process=None):
-    """
-    Callback appelé quand on ferme la fenêtre.
-    """
+    
     print("Fermeture de l'application...")
 
     # 1) D'abord la ventilation - ARRÊT DIRECT
     if manager is not None and hasattr(manager, "ventilation"):
         try:
-            print("🔄 Arrêt ventilation...")
+            print(" Arrêt ventilation...")
             # Appeler emergency_stop qui utilise les PWM existants
             manager.ventilation.emergency_stop()
             # Puis close pour nettoyer
             manager.ventilation.close()
-            print("✅ Ventilation arrêtée")
+            print(" Ventilation arrêtée")
         except Exception as e:
-            print(f"⚠️ Erreur ventilation: {e}")
+            print(f" Erreur ventilation: {e}")
     
     # 2) Ensuite le chauffage
     if manager is not None and hasattr(manager, "chauffage"):
         try:
             manager.chauffage.close()
-            print("✅ Chauffage arrêté")
+            print(" Chauffage arrêté")
         except Exception as e:
-            print(f"⚠️ Erreur chauffage: {e}")
+            print(f" Erreur chauffage: {e}")
 
     # 3) Processus moteur
     if motor_process is not None and motor_process.is_alive():
@@ -338,9 +293,9 @@ def on_closing(root, manager=None, motor_process=None):
             print("Arrêt du process moteur...")
             motor_process.terminate()
             motor_process.join(timeout=2.0)
-            print("✅ Moteur arrêté")
+            print(" Moteur arrêté")
         except Exception as e:
-            print(f"⚠️ Erreur moteur: {e}")
+            print(f" Erreur moteur: {e}")
 
     # 4) Petit délai
     time.sleep(0.5)
@@ -348,9 +303,9 @@ def on_closing(root, manager=None, motor_process=None):
     # 5) Fermeture de la fenêtre
     try:
         root.destroy()
-        print("✅ Interface fermée")
+        print(" Interface fermée")
     except Exception as e:
-        print(f"⚠️ Erreur fermeture interface: {e}")
+        print(f" Erreur fermeture interface: {e}")
 
 
 def main():

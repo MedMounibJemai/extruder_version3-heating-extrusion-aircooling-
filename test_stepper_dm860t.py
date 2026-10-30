@@ -1,10 +1,4 @@
 """
-Test isole du moteur NEMA23/DM860T, sans Tkinter ni multiprocessing -
-juste la classe MoteurExtrusion, pilotee directement depuis le terminal.
-
-But: valider que le moteur repond correctement (demarrage, vitesse,
-inversion de sens, arret) avant de le rebrancher a l'application complete.
-
 Commandes disponibles (tapees au clavier, Entree pour valider):
     on          -> active le moteur
     off         -> desactive le moteur
@@ -18,7 +12,7 @@ import time
 from modules.motor_dm860t import MoteurExtrusion
 
 if __name__ == "__main__":
-    print("=== Test isole moteur NEMA23/DM860T ===")
+    print("=== Test isolé moteur NEMA23/DM860T ===")
     print("Broches: DIR=GPIO22, STEP=GPIO23, EN=non cablee")
     print("Microstepping: 1/8 (verifie DIP switch SW5-8 = ON,OFF,ON,ON)\n")
 

@@ -8,21 +8,6 @@ import time
 
 
 class SystemeChauffageMAX6675:
-    """
-    Classe dédiée au contrôle de chauffage via:
-      - Thermocouple K + MAX6675 (SPI spidev)
-      - Sortie PWM via PWMOutputDevice (MOSFET / SSR DC)
-      - PID simple_pid
-      - PID Autotune (PID_ATune)
-      - Historique (timestamps, températures, pwm)
-      - Lecture/écriture des paramètres PID dans un fichier
-
-    API principale:
-      - process_command("DEMARRER" | "STOP" | "AUTOTUNE" | "SETPOINT:x" | "SETPID:kp,ki,kd")
-      - appliquer_pid_depuis_fichier()
-      - update() -> dict(temperature, setpoint, pwm, timestamp)
-      - close()
-    """
 
     def __init__(self) :
         # --- PWM / sortie chauffage
@@ -54,25 +39,8 @@ class SystemeChauffageMAX6675:
         self.pwm_values = []
         self.start_time = datetime.now()
 
-        # --- Autotune init
-        # On lui donne:
-        #  - une fonction de lecture T
-        #  - une fonction d'écriture de sortie (ici on écrit pid.output via setattr)
-        #self.pid_atune = PID_ATune(self.read_temperature, lambda x: setattr(self.pid, "output", x))
+        
         self.pid_atune = PID_ATune(self.read_temperature, lambda x: self.set_pwm(x))
-        #Envoi des logs à l'UI
-    #     self.serial_callback = None
-    
-    # def _log(self, msg: str):
-    #     """Envoie un message au Serial Monitor si callback présent, sinon print."""
-    #     try:
-    #         if self.serial_callback:
-    #             self.serial_callback(msg)
-    #         else:
-    #             print(msg)
-    #     except Exception as e:
-    #         print("Erreur serial_callback:", e)
-    #         print(msg)
 
   
     # PID + fichier
@@ -93,8 +61,7 @@ class SystemeChauffageMAX6675:
         self.pid = PID(kp, ki, kd, setpoint=self.setpoint)
         self.pid.output_limits = (0, 100)
 
-        # Par défaut, on laisse auto_mode selon l'état chauffage_active (a voir en détailles)
-        #self.pid.auto_mode = self.chauffage_active
+        
         self.pid.set_auto_mode(True, last_output=self.output_pwm)  # Démarrer avec la dernière sortie PWM
     
     def appliquer_pid_depuis_fichier(self):
@@ -108,11 +75,7 @@ class SystemeChauffageMAX6675:
 
     # Fonctions pour lire la température via MAX6675
     def max6675_read_celsius(self):
-        """
-        MAX6675 retourne 16 bits.
-        - D2 = 1 => thermocouple ouvert
-        - D15..D3 => température * 4 (pas 0.25°C)
-        """
+        
         data = self.spi.xfer2([0x00, 0x00])
         value = (data[0] << 8) | data[1]
 
@@ -123,7 +86,7 @@ class SystemeChauffageMAX6675:
         return temp_c
 
     def read_temperature(self):
-        """Lecture température (avec gestion d'erreurs)."""
+        
         try:
             return self.max6675_read_celsius()
         except Exception as e:
@@ -133,17 +96,11 @@ class SystemeChauffageMAX6675:
 
     # Fonction pour appliquer le PWM au mosfet 
     def set_pwm(self, value):
-        """Applique une valeur PWM entre 0 et 100%."""
+        
         try:
-            # pwm_value = max(0, min(1, value/100.0))
-            # self.pwm.value = pwm_value
-            # Limiter en %
+            
             value_percent = max(0.0, min(100.0, float(value)))
-
-            # Sauvegarder pour PID / UI
             self.output_pwm = value_percent
-
-            # Convertir en ratio pour gpiozero
             pwm_ratio = value_percent / 100.0
             self.pwm.value = pwm_ratio
 
@@ -152,14 +109,7 @@ class SystemeChauffageMAX6675:
 
     # Fonction pour traiter les commandes
     def process_command(self, command):
-        """
-        Commandes supportées:
-          - "AUTOTUNE"
-          - "SETPOINT:xxx"
-          - "SETPID:kp,ki,kd"
-          - "DEMARRER"
-          - "STOP"
-        """
+        
         if command == "AUTOTUNE":
             self.autotune_mode = True
             self.chauffage_active = True
@@ -242,7 +192,6 @@ class SystemeChauffageMAX6675:
         # 3) Contrôle PID normal 
         elif self.chauffage_active: # elif : PID normal seulement si pas d'autotune
             self.output_pwm = self.pid(temperature)
-            #self.output_pwm = max(0, min(100, self.output_pwm))
             self.set_pwm(self.output_pwm)
 
         # 4) Mise à jour des historiques
@@ -250,9 +199,7 @@ class SystemeChauffageMAX6675:
         self.timestamps.append(t)
         self.temperatures.append(temperature)
         self.pwm_values.append(self.output_pwm)
-        #######
-        #self._log(f"Température: {temperature:.2f}  Consigne: {self.setpoint:.2f}  PWM: {self.output_pwm:.2f}")
-        #######
+        
         return {
             "temperature": temperature,
             "setpoint": self.setpoint,
@@ -288,11 +235,7 @@ class SystemeChauffageMAX6675:
         }
 
     def calcul_pid_tyreus_luyben(self, kp_classic, ki_classic, kd_classic):
-        """
-        Reconstruit Ku et Pu à partir des gains PID classiques retournés
-        par PID_ATune, puis calcule les gains PID avec la méthode
-        Tyreus-Luyben.
-        """
+        
         # PID classique de Ziegler-Nichols :
         # Kp = 0.6*Ku ; Ti = Kp/Ki = Pu/2 ; Td = Kd/Kp = Pu/8
         Ku = kp_classic / 0.6 if kp_classic else 0

@@ -3,7 +3,7 @@ import json
 from tkinter import messagebox, filedialog
 from PIL import Image, ImageTk
 
-# Une version simplifiée d'une frame défilable avec uniquement une scrollbar verticale.
+
 class ScrollableFrame(tk.Frame):
     def __init__(self, container, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
@@ -11,7 +11,7 @@ class ScrollableFrame(tk.Frame):
         self.v_scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
         
-        # Ce frame contiendra tout le contenu de la fenêtre de configuration.
+       
         self.scrollable_frame = tk.Frame(self.canvas, bg="white")
         self.scrollable_frame.bind(
             "<Configure>",
