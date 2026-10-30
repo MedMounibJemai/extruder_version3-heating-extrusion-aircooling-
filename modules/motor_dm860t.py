@@ -68,11 +68,12 @@ class MoteurExtrusion:
         mode_pins=None,
         motor_ui=None,
         steps_per_rev=200,      # NEMA34 typique: 1.8deg/pas -> 200 pas/tour
-        microstep_mode='1/4step',  # DOIT correspondre au reglage DIP switch du DM860T   
+        microstep_mode='fullstep',  # DOIT correspondre au reglage DIP switch du DM860T   
         max_rpm=75.0,
         default_rpm=10.0,
         control_enabled=True,
         ramp_rpm_per_sec=200.0
+        gear_ratio=10.0,  # réducteur 1:10
     ):
         self.motor_ui = motor_ui
         self.max_rpm = max_rpm
@@ -90,6 +91,7 @@ class MoteurExtrusion:
         self.steps_per_rev = int(steps_per_rev)
         self.microstep_mode = microstep_mode
         self.microstep_factor = self._microstep_factor_from_mode(microstep_mode)
+        self.gear_ratio = float(gear_ratio)
 
         self.control_enabled = bool(control_enabled)
 
@@ -203,7 +205,8 @@ class MoteurExtrusion:
         if rpm <= 0:
             return 0.0
 
-        steps_per_rev_effective = self.steps_per_rev * self.microstep_factor
+        #steps_per_rev_effective = self.steps_per_rev * self.microstep_factor
+        steps_per_rev_effective = (self.steps_per_rev * self.microstep_factor * self.gear_ratio) #calcul avec gearbox
         step_freq = rpm * steps_per_rev_effective / 60.0  # pas/s
 
         if step_freq <= 0:
@@ -276,6 +279,7 @@ class MoteurExtrusion:
             if time_since_last_step >= step_period:
                 try:
                     self.driver.digital_write(self.driver.step_pin, 1)
+                    time.sleep(0.00001) #précaution pour laisser le temps au RPi de bien générer l'impulsion
                     self.driver.digital_write(self.driver.step_pin, 0)
 
                     step_count += 1
@@ -286,7 +290,8 @@ class MoteurExtrusion:
                     now_perf = time.perf_counter()
                     dt_window = now_perf - rpm_window_start
                     if dt_window >= 1.0:
-                        steps_per_rev_effective = self.steps_per_rev * self.microstep_factor
+                        #steps_per_rev_effective = self.steps_per_rev * self.microstep_factor
+                        steps_per_rev_effective = (self.steps_per_rev * self.microstep_factor * self.gear_ratio) #calcul avec gearbox
                         step_freq = step_count / dt_window
                         rpm_meas = (step_freq / steps_per_rev_effective) * 60.0
 
@@ -318,11 +323,12 @@ def run_motor_process(cmd_queue, status_queue):
         enable_pin=None,
         mode_pins=None,
         steps_per_rev=200,
-        microstep_mode='1/4step',  # DOIT matcher avec DIP switch DM860T 
+        microstep_mode='fullstep',  # DOIT matcher avec DIP switch DM860T 
         max_rpm=250.0,
         default_rpm=10.0,
         control_enabled=True,
         ramp_rpm_per_sec=200.0
+        gear_ratio=10.0,
     )
 
     last_status_time = time.time()
